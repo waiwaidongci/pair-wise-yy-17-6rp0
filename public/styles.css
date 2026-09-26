@@ -309,6 +309,16 @@ main {
   border-radius: 8px;
 }
 
+.recheck {
+  margin-top: 12px;
+  border-top: 1px dashed var(--line);
+  padding-top: 12px;
+}
+
+.recheck .form-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .toast {
   position: fixed;
   right: 20px;
@@ -352,7 +362,8 @@ main {
   .stats,
   .form-grid,
   .detail,
-  .toolbar {
+  .toolbar,
+  .recheck .form-grid {
     grid-template-columns: 1fr;
   }
 

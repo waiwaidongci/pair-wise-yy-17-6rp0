@@ -61,6 +61,12 @@ function relationLabel(relation, id) {
   return relation.labelFields.map((field) => item[field]).filter(Boolean).join(' / ');
 }
 
+function siteLabel(siteId) {
+  const site = (state.db.sites || []).find((entry) => entry.id === siteId);
+  if (!site) return '未关联';
+  return [site.cave, site.zone, site.pointCode].filter(Boolean).join(' / ');
+}
+
 function optionList(items, labelFields) {
   return items.map((item) => {
     const label = labelFields.map((field) => item[field]).filter(Boolean).join(' / ');
@@ -136,19 +142,63 @@ function renderCard(item, collection, view) {
   const details = (view.detailFields || []).map((field) => {
     const raw = item[field.name];
     const value = field.type === 'relation' ? relationLabel(field, raw) : raw;
-    return `<div>${escapeHtml(field.label)}<br><strong>${escapeHtml(value || '-')}</strong></div>`;
+    return `<div>${escapeHtml(field.label)}<br><strong>${escapeHtml(value ?? '-')}</strong></div>`;
   }).join('');
   const summary = (view.summaryFields || []).map((field) => item[field]).filter(Boolean).join(' · ');
   const actions = state.config.actions
     .filter((action) => action.collection === collection)
     .map((action) => `<button class="${action.danger ? 'danger' : 'ghost'}" data-action="${action.id}" data-id="${item.id}">${escapeHtml(action.label)}</button>`)
     .join('');
+  const corrections = (view.corrections || [])
+    .map((entry) => `<button class="ghost" data-correct="1" data-collection="${collection}" data-id="${item.id}" data-field="${entry.field}" data-label="${escapeHtml(entry.label)}">${escapeHtml(entry.label)}</button>`)
+    .join('');
   return `<article class="card">
     <div class="card-head"><h3>${escapeHtml(title)}</h3>${statusValue ? pill(statusValue, toneFor(statusValue)) : ''}</div>
     ${relation}
     ${summary ? `<p>${escapeHtml(summary)}</p>` : ''}
     ${details ? `<div class="detail">${details}</div>` : ''}
-    ${actions ? `<div class="actions">${actions}</div>` : ''}
+    ${actions || corrections ? `<div class="actions">${actions}${corrections}</div>` : ''}
+    ${historyHtml(item)}
+  </article>`;
+}
+
+function renderAnyCard(item, collection, view) {
+  return collection === 'incidents' ? renderIncidentCard(item) : renderCard(item, collection, view);
+}
+
+function renderIncidentCard(item) {
+  const open = item.status !== '已关闭';
+  const team = (item.handlingTeam || []).join('、') || '-';
+  const permit = open && item.permitSuspended ? pill('停发', 'bad') : pill('正常签发', 'ok');
+  const readings = (item.readings || []).map((entry) => `
+    <div class="history-item"><span>${fmtDate(entry.at)}</span><span>${escapeHtml(entry.surveyor || '巡测')} 上报 ${escapeHtml(entry.co2)}ppm${Number(entry.peopleInside) > 0 ? `，洞内${escapeHtml(entry.peopleInside)}人` : ''}</span></div>
+  `).join('');
+  const checks = (item.ventilationChecks || []).map((check) => `
+    <div class="history-item"><span>${fmtDate(check.at)}</span><span>${escapeHtml(check.tester)} 复测 ${escapeHtml(check.co2)}ppm（${check.pass ? '回到基准80ppm以内' : '未回到基准80ppm以内'}）</span></div>
+  `).join('');
+  const recheck = open ? `
+    <form class="recheck" data-recheck="${item.id}">
+      <div class="form-grid">
+        <label>复测人（非处置组）<input name="tester" required></label>
+        <label>复测 CO2 (ppm)<input type="number" name="co2" required></label>
+        <label>复测时间（默认当前）<input type="datetime-local" name="at"></label>
+      </div>
+      <div class="actions">
+        <button>登记通风复测</button>
+        <button type="button" class="ghost" data-close="${item.id}">关闭处置</button>
+      </div>
+    </form>` : '';
+  return `<article class="card">
+    <div class="card-head"><h3>${escapeHtml(siteLabel(item.siteId))}</h3><div class="inline-actions">${pill(item.status, toneFor(item.status))}${permit}</div></div>
+    <div class="meta">开立 ${fmtDate(item.openedAt)}${item.closedAt ? ` · 关闭 ${fmtDate(item.closedAt)}` : ''} · 处置组：${escapeHtml(team)} · 留档 ${(item.revisions || []).length} 次</div>
+    <div class="detail">
+      <div>基准CO2<br><strong>${escapeHtml(item.baselineCo2)}ppm</strong></div>
+      <div>峰值CO2<br><strong>${escapeHtml(item.peakCo2)}ppm</strong></div>
+      <div>复测次数<br><strong>${(item.ventilationChecks || []).length}</strong></div>
+    </div>
+    ${readings ? `<div class="history"><div class="meta">归单读数</div>${readings}</div>` : ''}
+    ${checks ? `<div class="history"><div class="meta">通风复测</div>${checks}</div>` : ''}
+    ${recheck}
     ${historyHtml(item)}
   </article>`;
 }
@@ -167,15 +217,48 @@ function renderList(view) {
   return items.length ? items.map((item) => renderCard(item, collection, view)).join('') : `<div class="empty">暂无${escapeHtml(collectionLabel(collection))}</div>`;
 }
 
+function renderIncidentList(view) {
+  const query = $(`#search-${view.id}`)?.value.trim() || '';
+  const status = $(`#status-${view.id}`)?.value || '';
+  let items = [...(state.db.incidents || [])];
+  if (status) items = items.filter((item) => item.status === status);
+  if (query) {
+    items = items.filter((item) => siteLabel(item.siteId).includes(query)
+      || (item.readings || []).some((entry) => String(entry.surveyor || '').includes(query))
+      || (item.ventilationChecks || []).some((entry) => String(entry.tester || '').includes(query)));
+  }
+  return items.length ? items.map(renderIncidentCard).join('') : '<div class="empty">暂无处置单</div>';
+}
+
 function renderDashboardView(view) {
-  const source = view.focus;
-  let items = [...(state.db[source.collection] || [])];
-  if (source.field) items = items.filter((item) => source.values.includes(item[source.field]));
-  items = items.slice(0, source.limit || 8);
-  const cardView = state.config.views.find((entry) => entry.collection === source.collection) || source;
+  const sources = Array.isArray(view.focus) ? view.focus : [view.focus];
+  const panels = sources.map((source) => {
+    let items = [...(state.db[source.collection] || [])];
+    if (source.field) items = items.filter((item) => source.values.includes(item[source.field]));
+    items = items.slice(0, source.limit || 8);
+    const cardView = state.config.views.find((entry) => entry.collection === source.collection) || source;
+    const cards = items.map((item) => renderAnyCard(item, source.collection, cardView)).join('');
+    return `<div class="panel"><h2>${escapeHtml(source.title || view.focusTitle || '')}</h2><div class="list">${cards || '<div class="empty">暂无重点事项</div>'}</div></div>`;
+  }).join('');
   return `<section class="view active" id="${view.id}">
     ${renderStats()}
-    <div class="panel"><h2>${escapeHtml(view.focusTitle)}</h2><div class="list">${items.length ? items.map((item) => renderCard(item, source.collection, cardView)).join('') : '<div class="empty">暂无重点事项</div>'}</div></div>
+    ${panels}
+  </section>`;
+}
+
+function renderIncidentsView(view) {
+  return `<section class="view" id="${view.id}">
+    <div class="panel">
+      <h2>${escapeHtml(view.listTitle)}</h2>
+      <div class="toolbar">
+        <input id="search-${view.id}" placeholder="${escapeHtml(view.searchPlaceholder || '搜索')}">
+        <select id="status-${view.id}">
+          <option value="">全部状态</option>
+          ${(view.statusOptions || []).map((option) => `<option>${escapeHtml(option)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="list" id="list-${view.id}">${renderIncidentList(view)}</div>
+    </div>
   </section>`;
 }
 
@@ -207,7 +290,11 @@ function render() {
   $('#title').textContent = state.config.title;
   document.title = state.config.title;
   $('#lede').textContent = state.config.lede;
-  $('#main').innerHTML = state.config.views.map((view) => view.type === 'dashboard' ? renderDashboardView(view) : renderCrudView(view)).join('');
+  $('#main').innerHTML = state.config.views.map((view) => {
+    if (view.type === 'dashboard') return renderDashboardView(view);
+    if (view.type === 'incidents') return renderIncidentsView(view);
+    return renderCrudView(view);
+  }).join('');
   setTab(state.activeTab || state.config.views[0].id);
 }
 
@@ -219,6 +306,8 @@ async function load() {
 document.addEventListener('click', async (event) => {
   const tab = event.target.closest('.tab');
   const action = event.target.closest('[data-action]');
+  const closeBtn = event.target.closest('[data-close]');
+  const correctBtn = event.target.closest('[data-correct]');
   if (tab) setTab(tab.dataset.tab);
   if (action) {
     try {
@@ -229,14 +318,58 @@ document.addEventListener('click', async (event) => {
       toast(error.message);
     }
   }
+  if (closeBtn) {
+    try {
+      await api(`/api/incidents/${closeBtn.dataset.close}/close`, { method: 'POST', body: '{}' });
+      await load();
+      toast('处置已关闭，许可已恢复');
+    } catch (error) {
+      toast(error.message);
+    }
+  }
+  if (correctBtn) {
+    const { collection, id, field, label } = correctBtn.dataset;
+    const item = (state.db[collection] || []).find((entry) => entry.id === id);
+    const input = window.prompt(`${label}（当前：${item?.[field] ?? '-'}）`, item?.[field] ?? '');
+    if (input === null) return;
+    const value = Number(input);
+    if (!Number.isFinite(value)) {
+      toast('数值无效');
+      return;
+    }
+    try {
+      await api(`/api/${collection}/${id}`, { method: 'PATCH', body: JSON.stringify({ [field]: value, historyAction: label }) });
+      await load();
+      toast('已更正，未关闭处置单已按新值重判');
+    } catch (error) {
+      toast(error.message);
+    }
+  }
 });
 
 document.addEventListener('input', (event) => {
   const view = state.config.views.find((entry) => entry.id && (event.target.id === `search-${entry.id}` || event.target.id === `status-${entry.id}`));
-  if (view) $(`#list-${view.id}`).innerHTML = renderList(view);
+  if (!view) return;
+  $(`#list-${view.id}`).innerHTML = view.type === 'incidents' ? renderIncidentList(view) : renderList(view);
 });
 
 document.addEventListener('submit', async (event) => {
+  const recheckForm = event.target.closest('[data-recheck]');
+  if (recheckForm) {
+    event.preventDefault();
+    const payload = Object.fromEntries(new FormData(recheckForm).entries());
+    payload.co2 = Number(payload.co2);
+    if (payload.at) payload.at = new Date(payload.at).toISOString();
+    else delete payload.at;
+    try {
+      const result = await api(`/api/incidents/${recheckForm.dataset.recheck}/recheck`, { method: 'POST', body: JSON.stringify(payload) });
+      await load();
+      toast(result.closed ? '复测合格，处置已关闭并恢复许可' : '复测已登记');
+    } catch (error) {
+      toast(error.message);
+    }
+    return;
+  }
   const form = event.target.closest('[data-create]');
   if (!form) return;
   event.preventDefault();

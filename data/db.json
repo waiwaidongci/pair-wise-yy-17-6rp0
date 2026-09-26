@@ -8,6 +8,7 @@
       "route": "西线巡测",
       "sensitivity": "高",
       "protectedStatus": "重点保护",
+      "permitStatus": "正常签发",
       "baselineTemp": 16.2,
       "baselineHumidity": 92,
       "baselineCo2": 680,
@@ -28,6 +29,7 @@
       "temperature": 17.4,
       "humidity": 88,
       "co2": 920,
+      "peopleInside": 0,
       "dripRate": 12,
       "disturbance": "栏杆外侧有触碰痕迹",
       "photoUrl": "",
@@ -37,6 +39,29 @@
       "updatedAt": "2026-06-18T10:00:00.000Z",
       "history": [
         { "at": "2026-06-18T10:00:00.000Z", "action": "创建", "note": "CO2升高并有干扰痕迹" }
+      ]
+    }
+  ],
+  "incidents": [
+    {
+      "id": "incident-seed-1",
+      "siteId": "site-seed-1",
+      "status": "处置中",
+      "baselineCo2": 680,
+      "peakCo2": 920,
+      "permitSuspended": false,
+      "readings": [
+        { "surveyId": "survey-seed-1", "co2": 920, "peopleInside": 0, "surveyor": "沈宁", "at": "2026-06-18T10:00:00.000Z" }
+      ],
+      "ventilationChecks": [],
+      "revisions": [],
+      "handlingTeam": ["沈宁"],
+      "openedAt": "2026-06-18T10:00:00.000Z",
+      "closedAt": null,
+      "createdAt": "2026-06-18T10:00:00.000Z",
+      "updatedAt": "2026-06-18T10:00:00.000Z",
+      "history": [
+        { "at": "2026-06-18T10:00:00.000Z", "action": "开立处置单", "note": "CO2 920ppm，高出基准240ppm" }
       ]
     }
   ]
