@@ -1,24 +1,40 @@
 module.exports = {
   port: 3912,
   title: '钟乳石洞穴微环境巡测',
-  lede: '围绕洞穴、分区、样点和巡测路线记录微环境数据，发现异常后生成复查闭环。',
+  lede: '围绕洞穴、分区、样点和巡测路线记录微环境数据，CO2高值自动触发处置闭环：读数归并、入口停发、通风复测、更正重判。',
+  // 高值处置判定规则（判定逻辑见 src/judgment.js）
+  rules: {
+    highMargin: 150,
+    resumeMargin: 80,
+    retestIntervalMinutes: 30,
+    retestsRequired: 2,
+    handlingTeam: ['沈宁', '陆则明']
+  },
   tones: {
     '常规观察': 'ok',
     '正常': 'ok',
     '已复查': 'ok',
+    '已关闭': 'ok',
+    '已签发': 'ok',
     '重点保护': 'warn',
     '异常待复查': 'bad',
+    '处置中': 'bad',
+    '停发许可': 'bad',
     '暂停开放': 'bad'
   },
   collections: {
     sites: { label: '样点档案' },
-    surveys: { label: '巡测记录' }
+    surveys: { label: '巡测记录' },
+    incidents: { label: '处置单' },
+    permits: { label: '进场许可' }
   },
   stats: [
     { label: '样点', collection: 'sites' },
     { label: '重点保护', collection: 'sites', filter: { field: 'protectedStatus', value: '重点保护' } },
     { label: '巡测记录', collection: 'surveys' },
-    { label: '待复查', collection: 'surveys', filter: { field: 'status', value: '异常待复查' } }
+    { label: '待复查', collection: 'surveys', filter: { field: 'status', value: '异常待复查' } },
+    { label: '处置中', collection: 'incidents', filter: { field: 'status', value: '处置中' } },
+    { label: '停发许可', collection: 'incidents', filter: { field: 'entryHold', value: true } }
   ],
   views: [
     {
@@ -27,6 +43,16 @@ module.exports = {
       type: 'dashboard',
       focusTitle: '异常与复查',
       focus: { collection: 'surveys', field: 'status', values: ['异常待复查'], limit: 8 }
+    },
+    {
+      id: 'incidents',
+      label: '高值处置',
+      type: 'incidents'
+    },
+    {
+      id: 'permits',
+      label: '进场许可',
+      type: 'permits'
     },
     {
       id: 'sites',
@@ -44,7 +70,8 @@ module.exports = {
       detailFields: [
         { label: '洞穴', name: 'cave' },
         { label: '巡测路线', name: 'route' },
-        { label: '敏感等级', name: 'sensitivity' }
+        { label: '敏感等级', name: 'sensitivity' },
+        { label: '基准CO2', name: 'baselineCo2' }
       ],
       fields: [
         { label: '洞穴', name: 'cave', required: true },
@@ -63,6 +90,7 @@ module.exports = {
       id: 'surveys',
       label: '巡测记录',
       collection: 'surveys',
+      endpoint: 'readings',
       formTitle: '登记巡测',
       listTitle: '巡测历史',
       submitLabel: '保存巡测',
@@ -76,9 +104,10 @@ module.exports = {
       detailFields: [
         { label: '温度', name: 'temperature' },
         { label: '湿度', name: 'humidity' },
-        { label: 'CO2', name: 'co2' }
+        { label: 'CO2', name: 'co2' },
+        { label: '洞内人数', name: 'occupancy' }
       ],
-      defaults: { status: '正常', reviewNote: '' },
+      defaults: { status: '正常', reviewNote: '', occupancy: 0 },
       fields: [
         { label: '样点', name: 'siteId', type: 'relation', collection: 'sites', labelFields: ['cave', 'zone', 'pointCode'], required: true, wide: true },
         { label: '巡测人员', name: 'surveyor', required: true },
@@ -86,6 +115,7 @@ module.exports = {
         { label: '温度', name: 'temperature', type: 'number', required: true },
         { label: '湿度', name: 'humidity', type: 'number', required: true },
         { label: 'CO2', name: 'co2', type: 'number', required: true },
+        { label: '洞内人数', name: 'occupancy', type: 'number', required: true },
         { label: '滴水频率', name: 'dripRate', type: 'number', required: true },
         { label: '照片链接', name: 'photoUrl' },
         { label: '游客干扰痕迹', name: 'disturbance', type: 'textarea', wide: true }

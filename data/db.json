@@ -13,6 +13,25 @@
       "baselineCo2": 680,
       "note": "游客步道上方，滴水频率稳定",
       "createdAt": "2026-06-14T08:00:00.000Z",
+      "updatedAt": "2026-06-18T10:00:00.000Z",
+      "history": [
+        { "at": "2026-06-18T10:00:00.000Z", "action": "重点保护", "note": "触发高值处置" },
+        { "at": "2026-06-14T08:00:00.000Z", "action": "创建", "note": "样点建档" }
+      ]
+    },
+    {
+      "id": "site-seed-2",
+      "cave": "南峪一号洞",
+      "zone": "石笋厅",
+      "pointCode": "S-02",
+      "route": "东线巡测",
+      "sensitivity": "中",
+      "protectedStatus": "常规观察",
+      "baselineTemp": 15.8,
+      "baselineHumidity": 90,
+      "baselineCo2": 540,
+      "note": "洞厅开阔，通风良好",
+      "createdAt": "2026-06-14T08:00:00.000Z",
       "updatedAt": "2026-06-14T08:00:00.000Z",
       "history": [
         { "at": "2026-06-14T08:00:00.000Z", "action": "创建", "note": "样点建档" }
@@ -29,14 +48,53 @@
       "humidity": 88,
       "co2": 920,
       "dripRate": 12,
+      "occupancy": 6,
       "disturbance": "栏杆外侧有触碰痕迹",
       "photoUrl": "",
       "status": "异常待复查",
       "reviewNote": "",
+      "incidentId": "incident-seed-1",
       "createdAt": "2026-06-18T10:00:00.000Z",
       "updatedAt": "2026-06-18T10:00:00.000Z",
       "history": [
         { "at": "2026-06-18T10:00:00.000Z", "action": "创建", "note": "CO2升高并有干扰痕迹" }
+      ]
+    }
+  ],
+  "incidents": [
+    {
+      "id": "incident-seed-1",
+      "siteId": "site-seed-1",
+      "cave": "北麓三号洞",
+      "status": "处置中",
+      "baselineCo2": 680,
+      "triggerCo2": 920,
+      "peakCo2": 920,
+      "entryHold": true,
+      "readings": [
+        { "surveyId": "survey-seed-1", "co2": 920, "occupancy": 6, "reporter": "沈宁", "at": "2026-06-18T10:00:00.000Z" }
+      ],
+      "retests": [],
+      "createdAt": "2026-06-18T10:00:00.000Z",
+      "updatedAt": "2026-06-18T10:00:00.000Z",
+      "closedAt": null,
+      "history": [
+        { "at": "2026-06-18T10:00:00.000Z", "action": "创建处置单", "note": "CO2 920ppm，高出基准 240ppm" }
+      ]
+    }
+  ],
+  "permits": [
+    {
+      "id": "permit-seed-1",
+      "cave": "南峪一号洞",
+      "team": "地质所采样组",
+      "headcount": 3,
+      "note": "季度采样",
+      "status": "已签发",
+      "createdAt": "2026-06-18T08:30:00.000Z",
+      "updatedAt": "2026-06-18T08:30:00.000Z",
+      "history": [
+        { "at": "2026-06-18T08:30:00.000Z", "action": "签发", "note": "地质所采样组 3人进场" }
       ]
     }
   ]

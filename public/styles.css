@@ -300,6 +300,50 @@ main {
   font-size: 13px;
 }
 
+.pill-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.banner {
+  background: rgba(161, 61, 61, .1);
+  border: 1px solid rgba(161, 61, 61, .35);
+  color: var(--bad);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.sublist {
+  margin-top: 10px;
+}
+
+.sublist h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.sublist-item {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 10px;
+  font-size: 13px;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--line);
+}
+
+.retest-form {
+  margin-top: 12px;
+  border-top: 1px dashed var(--line);
+  padding-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
 .empty {
   color: var(--muted);
   padding: 24px;
@@ -356,7 +400,8 @@ main {
     grid-template-columns: 1fr;
   }
 
-  .history-item {
+  .history-item,
+  .sublist-item {
     grid-template-columns: 1fr;
   }
 }
